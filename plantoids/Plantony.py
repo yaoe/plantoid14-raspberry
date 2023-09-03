@@ -209,8 +209,9 @@ def setup():
     global selected_words_string
 
 
+    #print(os.getcwd()+"/prompt_context/plantony_context.txt")
     # load the personality of Plantony
-    prompt_text = open("../prompt_context/plantony_context.txt").read().strip()
+    prompt_text = open(os.getcwd()+"/prompt_context/plantony_context.txt").read().strip()
 
     opening = random.choice(opening_lines)
     closing = random.choice(closing_lines) 

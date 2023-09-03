@@ -11,6 +11,7 @@ numpy
 nltk
 speechrecognition
 scipy
-serial
+pyserial
 mutagen
 regex_spm
+toml

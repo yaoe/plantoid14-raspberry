@@ -4,43 +4,56 @@ import os
 import time
 
 import plantoids.Plantony as Plantony
-import lib.plantoid.serial as PlantoidSerial
+import lib.plantoid.serial_setup as PlantoidSerial
 import lib.plantoid.speech as PlantoidSpeech
 
-def PlantonyWelcome():
-    PlantoidSerial.sendToArduino("speaking")
+def PlantonyWelcome(use_arduino=False):
+
+    if use_arduino:
+        PlantoidSerial.sendToArduino("speaking")
+
     playsound(Plantony.introduction)
     
-    audiofile = PlantoidSpeech.speaktext(Plantony.opening)
+    audiofile = PlantoidSpeech.speak_text(Plantony.opening)
     print("welcome plantony... opening = " + audiofile)
  
     playsound(audiofile)
 
-def PlantonyQuit():
-    PlantoidSerial.sendToArduino("speaking")
-    playsound(PlantoidSpeech.speaktext(Plantony.closing)) 
-    playsound(Plantony.outroduction)
-    PlantoidSerial.sendToArduino("asleep")
+def PlantonyQuit(use_arduino=False):
 
-def PlantonyListen():
-    PlantoidSerial.sendToArduino("listening")
-    audiofile = PlantoidSpeech.listenSpeech(); 
+    if use_arduino:
+        PlantoidSerial.sendToArduino("speaking")
+
+    playsound(PlantoidSpeech.speak_text(Plantony.closing)) 
+    playsound(Plantony.outroduction)
+
+    if use_arduino:
+        PlantoidSerial.sendToArduino("asleep")
+
+def PlantonyListen(use_arduino=False):
+
+    if use_arduino:
+        PlantoidSerial.sendToArduino("listening")
+
+    audiofile = PlantoidSpeech.listen_for_speech(); 
     playsound(Plantony.acknowledge())
     print("Plantony listen is returning the audiofile as:  " + audiofile)
     return audiofile
 
-def PlantonyRespond(audio):
-    PlantoidSerial.sendToArduino("thinking")
+def PlantonyRespond(audio, use_arduino=False):
+
+    if use_arduino:
+        PlantoidSerial.sendToArduino("thinking")
 
     print("Plantony respond is receiving the audiofile as : " + audio)
 
     #===== play some background noise while we wait..
     stop_event = threading.Event()
-    sound_thread = threading.Thread(target=ambient_background, args=("/home/pi/PLLantoid/v6/media/metalsound.mp3", stop_event))
+    sound_thread = threading.Thread(target=ambient_background, args=(os.getcwd()+"/media/metalsound.mp3", stop_event))
     sound_thread.daemon = True
     sound_thread.start()
     
-    usertext = PlantoidSpeech.recoSpeech(audio)
+    usertext = PlantoidSpeech.record_speech(audio)
     print("I heard... " + usertext)
     if(not usertext): usertext = "Hmmmmm..."
 
@@ -51,26 +64,31 @@ def PlantonyRespond(audio):
     msg = PlantoidSpeech.GPTmagic(new_prompt, call_type='chat_completion')
     Plantony.turnsAppend(Plantony.AGENT, msg)
 
-    file = PlantoidSpeech.speaktext(msg)
+    audio_file = PlantoidSpeech.speak_text(msg)
 
     stop_event.set() # stop the background noise
 
-    PlantoidSerial.sendToArduino("speaking")
-    playsound(file)
+    if use_arduino:
+        PlantoidSerial.sendToArduino("speaking")
+    playsound(audio_file)
 
 
 
-def PlantonyWeaving():
-    PlantoidSerial.sendToArduino("speaking")
+def PlantonyWeaving(use_arduino=False):
+    
+    if use_arduino:
+        PlantoidSerial.sendToArduino("speaking")
+
     playsound(Plantony.reflection)
 
 
 
-def PlantonyOracle(network, audio, web3obj, tID, amount):
-    PlantoidSerial.sendToArduino("thinking")
+def PlantonyOracle(network, audio, web3obj, tID, amount, use_arduino=False):
+
+    if use_arduino:
+        PlantoidSerial.sendToArduino("thinking")
 
     path = web3obj.path
-
 
      #===== play some background noise while we wait..
     stop_event = threading.Event()
@@ -79,7 +97,7 @@ def PlantonyOracle(network, audio, web3obj, tID, amount):
     sound_thread.start()
 
 
-    generated_transcript = PlantoidSpeech.recoSpeech(audio)
+    generated_transcript = PlantoidSpeech.record_speech(audio)
     print("I heard... (oracle): " + generated_transcript)
     if(not generated_transcript): 
         generated_transcript = "I don't know what the future looks like. Describe a solarkpunk utopia where Plantoids have taken over the world."
@@ -127,7 +145,7 @@ def PlantonyOracle(network, audio, web3obj, tID, amount):
 
 
     # now let's read it aloud
-    audiofile = PlantoidSpeech.speaktext(sermon_text)
+    audiofile = PlantoidSpeech.speak_text(sermon_text)
     stop_event.set() # stop the background noise
 
 

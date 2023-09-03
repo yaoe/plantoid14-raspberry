@@ -95,7 +95,7 @@ def GPTmagic(prompt, call_type='chat_completion'):
         return response
 
 
-def speaktext(text):
+def speak_text(text):
     # Request TTS from remote API
     response = requests.post(url, json={"text": text, "voice_settings": {"stability": 0, "similarity_boost": 0}}, headers=headers)
 
@@ -113,7 +113,7 @@ def speaktext(text):
 
 
 
-def adjSoundEnv(stream): ## important in order to adjust the THRESHOLD based on environmental noise
+def adjust_sound_env(stream): ## important in order to adjust the THRESHOLD based on environmental noise
     
     data = []
     noisy = []
@@ -130,7 +130,7 @@ def adjSoundEnv(stream): ## important in order to adjust the THRESHOLD based on 
 
 
 
-def listenSpeech(): # @@@ remember to add acknowledgements afterwards
+def listen_for_speech(): # @@@ remember to add acknowledgements afterwards
 
     audio = pyaudio.PyAudio()
 
@@ -139,7 +139,7 @@ def listenSpeech(): # @@@ remember to add acknowledgements afterwards
 		        # input_device_index = device_index,
                 frames_per_buffer=CHUNK)
 
-    noisy = adjSoundEnv(stream)
+    noisy = adjust_sound_env(stream)
 
     THRESHOLD = 0
 
@@ -195,7 +195,7 @@ def listenSpeech(): # @@@ remember to add acknowledgements afterwards
                 print(">>> stopping recording because of timeout")
                 stream.stop_stream()
 
-                recwavfile(samples, audio)
+                record_wav_file(samples, audio)
 
                 #reset all vars
                 started = False
@@ -209,7 +209,7 @@ def listenSpeech(): # @@@ remember to add acknowledgements afterwards
             print ("recording stopped")
             stream.stop_stream()
             
-            recwavfile(samples, audio)
+            record_wav_file(samples, audio)
 
             #reset all vars
             started = False
@@ -224,7 +224,7 @@ def listenSpeech(): # @@@ remember to add acknowledgements afterwards
     return AUDIO_FILE
 
 
-def recwavfile(data, audio):
+def record_wav_file(data, audio):
 
     wf = wave.open(AUDIO_FILE, 'wb')
     wf.setnchannels(CHANNELS)
@@ -234,7 +234,7 @@ def recwavfile(data, audio):
     wf.close()
 
 
-def recoSpeech(filename):
+def record_speech(filename):
     
     print("trying to recognize from ... " + filename)
 

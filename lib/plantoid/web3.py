@@ -9,7 +9,6 @@ from pinata import Pinata
 
 import lib.plantoid.eden as eden
 
-
 class Web3Object:
     infura_websock = None
     w3 = None
@@ -29,6 +28,9 @@ load_dotenv()
 PINATA_API_KEY = os.environ.get("PINATA_API_KEY")
 PINATA_API_SECRET = os.environ.get("PINATA_API_SECRET")
 PINATA_JWT = os.getenv('PINATA_JWT')
+INFURA_API_KEY_MAINNET = os.environ.get("INFURA_MAINNET")
+INFURA_API_KEY_GOERLI = os.environ.get("INFURA_GOERLI")
+
 
 pinata = Pinata(PINATA_API_KEY, PINATA_API_SECRET, PINATA_JWT)
 
@@ -70,7 +72,6 @@ def setup(infura_websock, addr, path, feeding_amount, reclaim_url, failsafe):
 def process_previous_tx(web3obj):
 
     processing = 0
-    aaa = 0
 
     path = web3obj.path
     event_filter = web3obj.event_filter
@@ -199,4 +200,23 @@ def create_metadata(web3obj, tID):
 
 
 
+def setup_web3_provider():
+
+    # make sure that the script can listen to both events happening in mainnet and goerli, and process them accordingly !
+    goerli = setup('wss://goerli.infura.io/ws/v3/'+INFURA_API_KEY_GOERLI,
+                                '0x0B60EE161d7b67fa231e9565dAFF65b34553bC6F',
+                                '/home/pi/PLLantoid/v6/GOERLI/',
+                                1000000000000000,  # one line every 0.001 ETH
+                                "http://15goerli.plantoid.org",
+                                1) # this set failsafe = 1 (meaning we should recycle movies)
+
+    # lorem ipsum
+    mainnet = setup('wss://mainnet.infura.io/ws/v3/'+INFURA_API_KEY_MAINNET,
+                                '0x4073E38f71b2612580E9e381031B0c38B3B4C27E', 
+                                "/home/pi/PLLantoid/v6/MAINNET/",
+                                10000000000000000,  # one line every 0.01 ETH)
+                                "http://15.plantoid.org",
+                                0) # this set failsafe = 0 (meaning we should generate a new movie)
+    
+    return goerli, mainnet
 
