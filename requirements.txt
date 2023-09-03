@@ -1,0 +1,17 @@
+pinata
+web3
+python-dotenv
+pyaudio
+wave
+openai
+requests
+playsound
+pyaudio
+pydub
+sounddevice
+numpy
+nltk
+speechrecognition
+scipy
+serial
+mutagen
