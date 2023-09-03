@@ -1,7 +1,6 @@
 import random
 import playsound
-
-
+import os
 
 USER = "Human"
 AGENT = "Plantoid"
@@ -203,6 +202,7 @@ def updateprompt():
 
 def setup():
 
+    # NOTE: best to avoid declaring anything global ever.
     global prompt_text;
     global opening;
     global closing;
@@ -210,13 +210,12 @@ def setup():
 
 
     # load the personality of Plantony
-    prompt_text = open("/home/pi/PLLantoid/v6/plantony.txt").read().strip()
+    prompt_text = open("../prompt_context/plantony_context.txt").read().strip()
 
     opening = random.choice(opening_lines)
     closing = random.choice(closing_lines) 
 
     turns.append({ "speaker": AGENT, "text": opening })
-
 
     # for Plantony oracle
 

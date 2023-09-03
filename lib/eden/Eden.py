@@ -1,6 +1,7 @@
 import requests
 import time
 import json
+import os
 
 from dotenv import load_dotenv
 
@@ -9,12 +10,14 @@ from dotenv import load_dotenv
 
 EDEN_API_URL = "https://api.eden.art"
 
-load_dotenv('/home/pi/PLLantoid/v6/.env')
+load_dotenv()
 
+EDEN_KEY = os.environ.get("EDEN_KEY")
+EDEN_SECRET = os.environ.get("EDEN_SECRET")
 
 header = {
-     "x-api-key": os.getenv('EDEN_KEY'),
-     "x-api-secret": os.getenv('EDEN_SECRET')
+     "x-api-key": EDEN_KEY,
+     "x-api-secret": EDEN_SECRET,
 }
 
 

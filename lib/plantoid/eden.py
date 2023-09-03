@@ -10,7 +10,7 @@ import openai
 
 from mutagen.mp3 import MP3
 
-import Eden
+import lib.eden.Eden as Eden
 
 
 
@@ -309,16 +309,7 @@ def fallback_video(path, tID):
 
     return Zdir + outf
 
-
-        
-
-
-
-
-
-
-
-
+# TODO: figure out if it makes sense to have this
 if __name__ == "__main__":
 
     seed = sys.argv[1]

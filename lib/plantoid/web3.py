@@ -7,7 +7,7 @@ import json
 from dotenv import load_dotenv
 from pinata import Pinata
 
-import PlantoidEden
+import lib.plantoid.eden as eden
 
 
 class Web3Object:
@@ -20,19 +20,17 @@ class Web3Object:
     failsafe = None
 
 
+load_dotenv()
 
+# API_KEY = os.getenv('API_KEY')
+# API_SECRET = os.getenv('API_SECRET')
+# JWT = os.getenv('JWT')
 
+PINATA_API_KEY = os.environ.get("PINATA_API_KEY")
+PINATA_API_SECRET = os.environ.get("PINATA_API_SECRET")
+PINATA_JWT = os.getenv('PINATA_JWT')
 
-
-load_dotenv('/home/pi/PLLantoid/secrets.env')
-
-API_KEY = os.getenv('API_KEY')
-API_SECRET = os.getenv('API_SECRET')
-JWT = os.getenv('JWT')
-
-pinata = Pinata(API_KEY, API_SECRET, JWT)
-
-
+pinata = Pinata(PINATA_API_KEY, PINATA_API_SECRET, PINATA_JWT)
 
 def setup(infura_websock, addr, path, feeding_amount, reclaim_url, failsafe):
 
@@ -57,7 +55,6 @@ def setup(infura_websock, addr, path, feeding_amount, reclaim_url, failsafe):
     network.event_filter = network.plantoid_contract.events.Deposit.create_filter(fromBlock=1)
     print(network.event_filter)
     
-
     network.path = path
 
     network.min_amount = feeding_amount
@@ -69,9 +66,6 @@ def setup(infura_websock, addr, path, feeding_amount, reclaim_url, failsafe):
     return network
 
     # process_previous_tx(path, event_filter)
-
-
-
 
 def process_previous_tx(web3obj):
 
@@ -112,7 +106,6 @@ def process_previous_tx(web3obj):
             create_metadata(web3obj, str(event.args.tokenId))
 
     
-
 def checkforDeposits(web3obj):
 
     event_filter = web3obj.event_filter
@@ -122,7 +115,8 @@ def checkforDeposits(web3obj):
 
     except:
         print("failed to read new entries()\n")
-        return Null
+        # TODO: check if this is correct exception handling
+        return None
 
     else:
         for event in events:
@@ -133,15 +127,10 @@ def checkforDeposits(web3obj):
             return ( str(event.args.tokenId), int(event.args.amount) )  ### @@@@ need to fix this  :)
            #  return  str(event.args.tokenId) 
 
-
-
-
-
 def create_metadata(web3obj, tID):
 
 
     path = web3obj.path
-
 
     ### Pin the Video-Sermon on IPFS
 
@@ -164,8 +153,7 @@ def create_metadata(web3obj, tID):
             print("no Sermon associated with seed: " + tID)
             return
 
-        movie = PlantoidEden.createVideoFromAudio(path, tID, web3obj.failsafe)
-
+        movie = eden.createVideoFromAudio(path, tID, web3obj.failsafe)
 
 #    file_stats = os.stat(audio)
 
@@ -178,10 +166,6 @@ def create_metadata(web3obj, tID):
 #            print("pinning the movie to ipfs")
 #            audio = "/home/pi/PLLantoid/v5/voicevideo/voicefile2/processing-movie.mp4"
 
-    
-    
-
-
     if(movie):
             response = pinata.pin_file(movie)
             print(response)
@@ -189,8 +173,6 @@ def create_metadata(web3obj, tID):
             if(response and response.get('data')):
                 ipfsQmp3 = response['data']['IpfsHash']
                 print("reording the animation_url = " + ipfsQmp3)
-
-
 
     ### Create Metadata
 

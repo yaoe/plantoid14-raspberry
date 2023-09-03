@@ -1,12 +1,10 @@
 pinata
 web3
 python-dotenv
-pyaudio
 wave
 openai
 requests
 playsound
-pyaudio
 pydub
 sounddevice
 numpy
@@ -15,3 +13,4 @@ speechrecognition
 scipy
 serial
 mutagen
+regex_spm

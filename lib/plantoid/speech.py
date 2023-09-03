@@ -20,6 +20,8 @@ import random
 import os
 import time
 
+from utils.default_prompt_config import default_chat_completion_config, default_completion_config
+
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 44100
@@ -44,55 +46,53 @@ eleven_labs_api_key = os.environ.get("ELEVEN")
 headers = {
     "Accept": "audio/mpeg",
     "Content-Type": "application/json",
-    "xi-api-key": eleven_labs_api_key
+    "xi-api-key": eleven_labs_api_key,
 }
 
-url = "https://api.elevenlabs.io/v1/text-to-speech/o7lPjDgzlF8ZloHzVPeK"
+eleven_voice_id = 'o7lPjDgzlF8ZloHzVPeK'
+url = "https://api.elevenlabs.io/v1/text-to-speech/"+eleven_voice_id
 
 
-def default_prompt_config():
-    return {
-        "model": "gpt-4",
-        "temperature": 0.5,
-        "max_tokens": 128,
-        "logit_bias": {
-            198: -100  # prevent newline
-        }
-    }
+def GPTmagic(prompt, call_type='chat_completion'): 
 
+    # allowable kwargs
+    allowable_call_types = ['chat_completion', 'completion']
 
+    assert call_type in allowable_call_types, "The provided call type is not implemented"
 
-def GPTmagic(prompt): 
+    if call_type == 'chat_completion':
 
-    # Prepare the GPT magic
+        # Prepare the GPT magic
 
-    configs = default_prompt_config()
+        config = default_chat_completion_config(model="gpt-4")
 
-    # Generate the response from the GPT model
-    response = openai.ChatCompletion.create(messages=[{"role": "user", "content": prompt}], **configs)
+        # Generate the response from the GPT model
+        response = openai.ChatCompletion.create(messages=[{
+            "role": "user",
+            "content": prompt,
+        }], **config)
 
-    messages = response.choices[0].message.content
-    print(messages); 
-    return messages;
+        messages = response.choices[0].message.content
+        print(messages)
 
+        return messages
+    
+    if call_type == 'completion':
+        # # The GPT-3.5 model ID you want to use
+        # model_id = "text-davinci-003"
 
-def GPT3magic(prompt):
-    # The GPT-3.5 model ID you want to use
-    model_id = "text-davinci-003"
+        # # The maximum number of tokens to generate in the response
+        # max_tokens = 1024
 
-    # The maximum number of tokens to generate in the response
-    max_tokens = 1024
+        config = default_completion_config()
 
-    # Generate the response from the GPT-3.5 model
-    response = openai.Completion.create(
-        engine=model_id,
-        prompt=prompt,
-        max_tokens=max_tokens
-    )
+        # Generate the response from the GPT-3.5 model
+        response = openai.Completion.create(
+            prompt=prompt,
+            **config,
+        )
 
-    return response
-
-
+        return response
 
 
 def speaktext(text):
@@ -108,7 +108,8 @@ def speaktext(text):
         # playsound(filename)
         return filename	
     else:
-        print("Error: " + str(response.status_code))
+
+        raise Exception("Error: " + str(response.status_code))
 
 
 
@@ -191,7 +192,7 @@ def listenSpeech(): # @@@ remember to add acknowledgements afterwards
 
             # check for timeout
             if(time.time() - timing > TIMEOUT):
-                print("stopping recording because of timeout @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
+                print(">>> stopping recording because of timeout")
                 stream.stop_stream()
 
                 recwavfile(samples, audio)

@@ -1,0 +1,1 @@
+# NOTE: ideally plantony and other plantoids should inherit from plantoid core. Files for interaction (Plantoid15.py) should not need separate import of core and plantoid (Plantony.py)
