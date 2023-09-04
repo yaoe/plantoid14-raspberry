@@ -1,9 +1,9 @@
 import lib.plantoid.serial_setup as serial_setup
 import lib.plantoid.speech as speech
 import lib.plantoid.web3 as web3
-from lib.plantoid.core import *
+# from lib.plantoid.core import *
 
-import plantoids.Plantony as Plantony
+from plantoids.plantoid import Plantony
 
 from utils.util import load_config, str_to_bool
 
@@ -13,20 +13,20 @@ import regex_spm
 import time
 import os
 
-def invoke_plantony(max_turns=4):
+def invoke_plantony(plantony: Plantony, max_turns=4):
 
-    PlantonyWelcome()
+    plantony.welcome()
 
-    print("Iterating on Plantony with len(turns) == " + str(len(Plantony.turns)))
+    print('Iterating on Plantony n of turns:', len(plantony.turns), 'max turns:', max_turns)
 
-    while(len(Plantony.turns) < max_turns):
+    while(len(plantony.turns) < max_turns):
 
-        audiofile = PlantonyListen()
-        PlantonyRespond(audiofile)
+        audiofile = plantony.listen()
+        plantony.respond(audiofile)
 
-        PlantonyListen()
-        PlantonyQuit()
-        Plantony.turns = []
+        plantony.listen()
+        plantony.terminate()
+        plantony.turns = []
         # awake = 0
 
 def main():
@@ -43,8 +43,12 @@ def main():
     awake = 0
 
     #max_turns = 4 
-    Plantony.setup()
 
+    # instantiate plantony
+    plantony = Plantony()
+
+    # setup plantony
+    plantony.setup()
 
     if use_blockchain and use_arduino: 
 
@@ -82,7 +86,7 @@ def main():
                             awake = 1
                             serial_setup.sendToArduino("awake")
 
-                            invoke_plantony(max_turns=max_turns)
+                            invoke_plantony(plantony, max_turns=max_turns)
 
                             awake = 0
 
@@ -90,7 +94,7 @@ def main():
         else:
 
             print('skipping arduino usage')
-            invoke_plantony(max_turns=max_turns)
+            invoke_plantony(plantony, max_turns=max_turns)
             # check for a new Deposit event
 
         if use_blockchain:
@@ -105,14 +109,12 @@ def main():
 
                     print("got amount " + str(amount) + " for id = " + tID);
 
+                    plantony.weaving()
+                
+                    audiofile = plantony.listen()
+                
+                    plantony.oracle(network, audiofile, network, tID, amount)
 
-                    PlantonyWeaving()
-                
-                    audiofile = PlantonyListen()
-                
-                    PlantonyOracle(network, audiofile, network, tID, amount)
-
-                
                     serial_setup.sendToArduino("thinking")
                 
                     web3.create_metadata(network, tID)
