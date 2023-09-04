@@ -1,1 +1,1 @@
-# NOTE: ideally plantony and other plantoids should inherit from plantoid core. Files for interaction (Plantoid15.py) should not need separate import of core and plantoid (Plantony.py)
+# NOTE: plantoid is now fully class based, no more plantoid core. it runs ad infinitum currently, no termination conditions other than a force stop. to be fixed.
