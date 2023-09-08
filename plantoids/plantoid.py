@@ -20,8 +20,16 @@ class Plantony:
         self.opening = ""
         self.closing = ""
         self.prompt_text = ""
-        self.turns = []
+        # TODO: figure out how to encapsulate interaction groups into a single turn without modifying the array length if not 
+        # for the creation of a new cycle
 
+        # a round will contain a series of turns
+        self.rounds = [[]]
+
+        # # a turn will contain a series of interactions
+        # self.turns = []
+
+        # load the text content
         self.opening_lines, self.closing_lines, self.word_categories = get_text_content()
 
         # Load the sounds
@@ -44,19 +52,44 @@ class Plantony:
 
         return random.choice(self.acknowledgements)
 
-    def append_to_turns(self, agent, text):
+    def append_turn_to_round(self, agent, text):
 
-        self.turns.append({ "speaker": agent, "text": text })
+        # self.turns.append({ "speaker": agent, "text": text })
+
+        turn_data = { "speaker": agent, "text": text }
+
+        self.rounds[-1].append(turn_data)
+
+    # # NOTE: deprecated
+    # def reset_turns(self):
+
+    #     self.turns = []
+
+    # def append_turn(self, turn): # implicitly: to latest round
+
+    #     self.rounds[-1].append(turn)
+
+    def create_round(self):
+            
+        self.rounds.append([])
+
+    def reset_rounds(self):
+
+        self.rounds = []
 
     def update_prompt(self):
 
         lines = []
         transcript = ""
 
-        for turn in self.turns:
-            text = turn["text"]
-            speaker = turn["speaker"]
-            lines.append(speaker + ": " + text)
+        for turns in self.rounds:
+
+            for turn in turns:
+
+                text = turn["text"]
+                speaker = turn["speaker"]
+                lines.append(speaker + ": " + text)
+
         transcript = "\n".join(lines)
 
         return self.prompt_text.replace("{{transcript}}", transcript)
@@ -65,23 +98,24 @@ class Plantony:
 
         #print(os.getcwd()+"/prompt_context/plantony_context.txt")
         # load the personality of Plantony
-        prompt_text = open(os.getcwd()+"/prompt_context/plantony_context.txt").read().strip()
+        self.prompt_text = open(os.getcwd()+"/prompt_context/plantony_context.txt").read().strip()
 
-        opening = random.choice(self.opening_lines)
-        closing = random.choice(self.closing_lines) 
+        self.opening = random.choice(self.opening_lines)
+        self.closing = random.choice(self.closing_lines) 
 
-        self.turns.append({ "speaker": self.AGENT, "text": opening })
+        self.append_turn_to_round(self.AGENT, self.opening)
+
+        # self.turns.append({ "speaker": self.AGENT, "text": self.opening })
 
         # for Plantony oracle
-
-        selected_words = []
+        self.selected_words = []
 
         # select one item from each category
         for category in self.word_categories:
-            selected_words.append(random.choice(category['items']))
+            self.selected_words.append(random.choice(category['items']))
 
         # join the selected words into a comma-delimited string
-        selected_words_string = ', '.join(selected_words)
+        selected_words_string = ', '.join(self.selected_words)
 
         # print the result
         print("Plantony is setting up. His seed words are: " + selected_words_string)
@@ -97,6 +131,7 @@ class Plantony:
         playsound(self.introduction)
         
         audiofile = PlantoidSpeech.speak_text(self.opening)
+        print('plantony opening', self.opening)
         print("welcome plantony... opening = " + audiofile)
     
         playsound(audiofile)
@@ -106,6 +141,7 @@ class Plantony:
         if self.use_arduino:
             PlantoidSerial.sendToArduino("speaking")
 
+        print('plantony closing', self.closing)
         playsound(PlantoidSpeech.speak_text(self.closing)) 
         playsound(self.outroduction)
 
@@ -132,21 +168,29 @@ class Plantony:
         print("Plantony respond is receiving the audiofile as : " + audio)
 
         #===== play some background noise while we wait..
+        # threading is to not block execution as sound is playing
         stop_event = threading.Event()
         sound_thread = threading.Thread(target=self.ambient_background, args=(os.getcwd()+"/media/metalsound.mp3", stop_event))
         sound_thread.daemon = True
         sound_thread.start()
         
-        usertext = PlantoidSpeech.record_speech(audio)
-        print("I heard... " + usertext)
-        if(not usertext): usertext = "Hmmmmm..."
+        user_text = PlantoidSpeech.record_speech(audio)
 
-        self.append_to_turns(self.USER, usertext)
+        print("I heard... " + user_text)
+
+        if len(user_text) == 0:
+            
+            print('no text heard, using default text')
+            user_text = "Hmmmmm..."
+
+        self.append_turn_to_round(self.USER, user_text)
+
         new_prompt = self.update_prompt()
-        print("new prompt = " + new_prompt)
+
+        # print("new prompt = " + new_prompt)
 
         msg = PlantoidSpeech.GPTmagic(new_prompt, call_type='chat_completion')
-        self.append_to_turns(self.AGENT, msg)
+        self.append_turn_to_round(self.AGENT, msg)
 
         audio_file = PlantoidSpeech.speak_text(msg)
 
@@ -154,6 +198,7 @@ class Plantony:
 
         if self.use_arduino:
             PlantoidSerial.sendToArduino("speaking")
+
         playsound(audio_file)
 
 
@@ -164,7 +209,7 @@ class Plantony:
 
         playsound(self.reflection)
 
-    def PlantonyOracle(self, network, audio, web3obj, tID, amount, use_arduino=False):
+    def oracle(self, network, audio, web3obj, tID, amount, use_arduino=False):
 
         if self.use_arduino:
             PlantoidSerial.sendToArduino("thinking")
@@ -172,6 +217,8 @@ class Plantony:
         path = web3obj.path
 
         #===== play some background noise while we wait..
+        # NOTE: the idea is to simply be able to play this sound and terminate the associated thread once done
+        # stop_event triggers before the mp3 finishes playing * this is a threading loop!
         stop_event = threading.Event()
         sound_thread = threading.Thread(target=self.ambient_background, args=(os.getcwd()+"/media/metalsound.mp3", stop_event))
         sound_thread.daemon = True

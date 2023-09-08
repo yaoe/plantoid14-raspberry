@@ -2,4 +2,4 @@
 ENABLE_BLOCKCHAIN = "False"
 ENABLE_ARDUINO = "False"
 SERIAL_PORT_NAME = "/dev/ttyUSB0"
-MAX_TURNS=4
+max_rounds=4

@@ -13,21 +13,39 @@ import regex_spm
 import time
 import os
 
-def invoke_plantony(plantony: Plantony, max_turns=4):
+def invoke_plantony(plantony: Plantony, max_rounds=4):
 
+    print('plantony initiating...')
     plantony.welcome()
 
-    print('Iterating on Plantony n of turns:', len(plantony.turns), 'max turns:', max_turns)
+    print('Iterating on Plantony n of rounds:', len(plantony.rounds), 'max rounds:', max_rounds)
 
-    while(len(plantony.turns) < max_turns):
+    while(len(plantony.rounds) < max_rounds):
 
+        # create the round
+        plantony.create_round()
+
+        print('plantony rounds...')
+        print(len(plantony.rounds))
+
+        print('plantony listening...')
         audiofile = plantony.listen()
+
+        print('plantony responding...')
         plantony.respond(audiofile)
 
-        plantony.listen()
-        plantony.terminate()
-        plantony.turns = []
-        # awake = 0
+    # TODO: sub function without speech
+    print('plantony listening...')
+    plantony.listen()
+
+    print('plantony terminating...')
+    plantony.terminate()
+
+    print('debug: plantony rounds...')
+    print(plantony.rounds)
+
+    plantony.reset_rounds()
+    # awake = 0
 
 def main():
 
@@ -38,11 +56,12 @@ def main():
     use_blockchain = str_to_bool(cfg['ENABLE_BLOCKCHAIN'])
     use_arduino = str_to_bool(cfg['ENABLE_ARDUINO'])
     serial_port_name = cfg['SERIAL_PORT_NAME']
-    max_turns = cfg['MAX_TURNS']
+    max_rounds = cfg['max_rounds']
 
+    # TODO: either remove or create a paradigm for these
     awake = 0
 
-    #max_turns = 4 
+    #max_rounds = 4 
 
     # instantiate plantony
     plantony = Plantony()
@@ -86,19 +105,19 @@ def main():
                             awake = 1
                             serial_setup.sendToArduino("awake")
 
-                            invoke_plantony(plantony, max_turns=max_turns)
-
+                            invoke_plantony(plantony, max_rounds=max_rounds)
                             awake = 0
 
             
         else:
 
             print('skipping arduino usage')
-            invoke_plantony(plantony, max_turns=max_turns)
-            # check for a new Deposit event
+            invoke_plantony(plantony, max_rounds=max_rounds)
 
+        # check for a message from the blockchain
         if use_blockchain:
 
+            # check for a new Deposit event
             for network in (mainnet, goerli):
 
                 mylist  = web3.checkforDeposits(network) ### this returns the token ID and the amount of wei that plantoid has been fed with

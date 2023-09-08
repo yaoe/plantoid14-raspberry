@@ -204,14 +204,18 @@ def listen_for_speech(): # @@@ remember to add acknowledgements afterwards
 
         timing = None
 
+        print('preparing to record...')
+
         while(run):
+
             data = stream.read(CHUNK)
             silence_buffer.append(abs(audioop.avg(data, 2)))
 
             samples_buffer.extend(data)
 
             if (True in [x > THRESHOLD for x in silence_buffer]):
-                if(not started):
+
+                if not started:
                     print ("recording started")
                     started = True
                     samples_buffer.clear()
