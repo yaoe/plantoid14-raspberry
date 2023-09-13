@@ -1,4 +1,5 @@
 import random
+import pygame
 from playsound import playsound
 import os
 import threading
@@ -130,7 +131,7 @@ class Plantony:
 
         playsound(self.introduction)
         
-        audiofile = PlantoidSpeech.speak_text(self.opening)
+        audiofile = PlantoidSpeech.get_text_to_speech_response(self.opening)
         print('plantony opening', self.opening)
         print("welcome plantony... opening = " + audiofile)
     
@@ -142,7 +143,7 @@ class Plantony:
             PlantoidSerial.sendToArduino("speaking")
 
         print('plantony closing', self.closing)
-        playsound(PlantoidSpeech.speak_text(self.closing)) 
+        playsound(PlantoidSpeech.get_text_to_speech_response(self.closing)) 
         playsound(self.outroduction)
 
         if self.use_arduino:
@@ -162,46 +163,78 @@ class Plantony:
 
     def respond(self, audio):
 
+        def prompt_agent_and_respond(audio, callback, shared_response_container):
+            
+            # user text received from speech recognition
+            user_message = PlantoidSpeech.recognize_speech(audio)
+
+            print("I heard... " + user_message)
+
+            if len(user_message) == 0:
+                print('no text heard, using default text')
+                user_message = "Hmmmmm..."
+
+            # append the user's turn to the latest round
+            self.append_turn_to_round(self.USER, user_message)
+
+            use_prompt = self.update_prompt()
+
+            # print("new prompt = " + new_prompt)
+
+            # generate the response from the GPT model
+            agent_message = PlantoidSpeech.GPTmagic(use_prompt, call_type='chat_completion')
+
+            # append the agent's turn to the latest round
+            self.append_turn_to_round(self.AGENT, agent_message)
+
+            audio_file = PlantoidSpeech.get_text_to_speech_response(agent_message, callback=callback)
+            # shared_response_container["audio_file"] = audio_file
+            playsound(audio_file)
+
+            # TODO: figure out if this goes here or above
+            if self.use_arduino:
+                PlantoidSerial.sendToArduino("speaking")
+
+        
+        def play_background_music(filename):
+            pygame.mixer.init()
+            pygame.mixer.music.load(filename)
+            pygame.mixer.music.play(-1)  # Play on loop
+
+        def stop_background_music():
+            print('stop background music')
+            pygame.mixer.music.stop()
+
+        def after_elevenlabs_response():
+            stop_background_music()
+
         if self.use_arduino:
             PlantoidSerial.sendToArduino("thinking")
 
         print("Plantony respond is receiving the audiofile as : " + audio)
 
-        #===== play some background noise while we wait..
-        # threading is to not block execution as sound is playing
-        stop_event = threading.Event()
-        sound_thread = threading.Thread(target=self.ambient_background, args=(os.getcwd()+"/media/metalsound.mp3", stop_event))
-        sound_thread.daemon = True
-        sound_thread.start()
+        # create a shared response container
+        shared_response_container = dict()
+
+        # get the path to the background music
+        background_music_path = os.getcwd()+"/media/ambient3.mp3"
+
+        # play the background music
+        play_background_music(background_music_path)
+
+        # create a thread to call the API
+        thread = threading.Thread(target=prompt_agent_and_respond, args=(
+            audio,
+            after_elevenlabs_response,
+            shared_response_container,
+        ))
+
+        # start the thread
+        thread.start()
+
+        # The script will continue to run while waiting for the API response
+        thread.join()  # This line ensures the script waits for the API thread to complete before proceeding
         
-        user_text = PlantoidSpeech.record_speech(audio)
-
-        print("I heard... " + user_text)
-
-        if len(user_text) == 0:
-            
-            print('no text heard, using default text')
-            user_text = "Hmmmmm..."
-
-        self.append_turn_to_round(self.USER, user_text)
-
-        new_prompt = self.update_prompt()
-
-        # print("new prompt = " + new_prompt)
-
-        msg = PlantoidSpeech.GPTmagic(new_prompt, call_type='chat_completion')
-        self.append_turn_to_round(self.AGENT, msg)
-
-        audio_file = PlantoidSpeech.speak_text(msg)
-
-        stop_event.set() # stop the background noise
-
-        if self.use_arduino:
-            PlantoidSerial.sendToArduino("speaking")
-
-        playsound(audio_file)
-
-
     def weaving(self):
         
         if self.use_arduino:
@@ -224,7 +257,7 @@ class Plantony:
         sound_thread.daemon = True
         sound_thread.start()
 
-        generated_transcript = PlantoidSpeech.record_speech(audio)
+        generated_transcript = PlantoidSpeech.recognize_speech(audio)
 
         print("I heard... (oracle): " + generated_transcript)
 
@@ -274,7 +307,7 @@ class Plantony:
 
 
         # now let's read it aloud
-        audiofile = PlantoidSpeech.speak_text(sermon_text)
+        audiofile = PlantoidSpeech.get_text_to_speech_response(sermon_text)
         stop_event.set() # stop the background noise
 
 

@@ -41,8 +41,8 @@ def invoke_plantony(plantony: Plantony, max_rounds=4):
     print('plantony terminating...')
     plantony.terminate()
 
-    print('debug: plantony rounds...')
-    print(plantony.rounds)
+    # print('debug: plantony rounds...')
+    # print(plantony.rounds)
 
     plantony.reset_rounds()
     # awake = 0
@@ -59,9 +59,9 @@ def main():
     max_rounds = cfg['max_rounds']
 
     # TODO: either remove or create a paradigm for these
-    awake = 0
+    # awake = 0
 
-    #max_rounds = 4 
+    # max_rounds = 4 
 
     # instantiate plantony
     plantony = Plantony()
@@ -69,76 +69,79 @@ def main():
     # setup plantony
     plantony.setup()
 
-    if use_blockchain and use_arduino: 
+    # invoke plantony
+    invoke_plantony(plantony, max_rounds=max_rounds)
 
-        serial_setup.setupSerial(serialPortName=serial_port_name)
+    # if use_blockchain and use_arduino: 
 
-        serial_setup.sendToArduino("thinking")
+    #     serial_setup.setupSerial(serialPortName=serial_port_name)
 
-        goerli, mainnet = web3.setup_web3_provider()
+    #     serial_setup.sendToArduino("thinking")
 
-        web3.process_previous_tx(mainnet)
-        web3.process_previous_tx(goerli)
+    #     goerli, mainnet = web3.setup_web3_provider()
 
-        serial_setup.sendToArduino("asleep")
+    #     web3.process_previous_tx(mainnet)
+    #     web3.process_previous_tx(goerli)
+
+    #     serial_setup.sendToArduino("asleep")
 
 
-    while True:
+    # while True:
 
-        # check for a message from Arduino
-        if use_arduino:
+    #     # check for a message from Arduino
+    #     if use_arduino:
             
-            arduinoReply = serial_setup.recvLikeArduino()
+    #         arduinoReply = serial_setup.recvLikeArduino()
         
-            if not (arduinoReply == 'XXX'):
-                print("received... " + arduinoReply);
+    #         if not (arduinoReply == 'XXX'):
+    #             print("received... " + arduinoReply);
 
-                match regex_spm.fullmatch_in(arduinoReply):
+    #             match regex_spm.fullmatch_in(arduinoReply):
                 
-                    case r"Touched" as m:
+    #                 case r"Touched" as m:
 
-                        if awake == 1:
-                            awake = 0
-                            serial_setup.sendToArduino("asleep")
+    #                     if awake == 1:
+    #                         awake = 0
+    #                         serial_setup.sendToArduino("asleep")
                     
-                        else:
-                            awake = 1
-                            serial_setup.sendToArduino("awake")
+    #                     else:
+    #                         awake = 1
+    #                         serial_setup.sendToArduino("awake")
 
-                            invoke_plantony(plantony, max_rounds=max_rounds)
-                            awake = 0
+    #                         invoke_plantony(plantony, max_rounds=max_rounds)
+    #                         awake = 0
 
             
-        else:
+    #     else:
 
-            print('skipping arduino usage')
-            invoke_plantony(plantony, max_rounds=max_rounds)
+    #         print('skipping arduino usage')
+    #         invoke_plantony(plantony, max_rounds=max_rounds)
 
-        # check for a message from the blockchain
-        if use_blockchain:
+    #     # check for a message from the blockchain
+    #     if use_blockchain:
 
-            # check for a new Deposit event
-            for network in (mainnet, goerli):
+    #         # check for a new Deposit event
+    #         for network in (mainnet, goerli):
 
-                mylist  = web3.checkforDeposits(network) ### this returns the token ID and the amount of wei that plantoid has been fed with
+    #             mylist  = web3.checkforDeposits(network) ### this returns the token ID and the amount of wei that plantoid has been fed with
 
-                if(mylist != None):  # Plantoid has been fed
+    #             if(mylist != None):  # Plantoid has been fed
                 
-                    (tID, amount) = mylist
+    #                 (tID, amount) = mylist
 
-                    print("got amount " + str(amount) + " for id = " + tID);
+    #                 print("got amount " + str(amount) + " for id = " + tID);
 
-                    plantony.weaving()
+    #                 plantony.weaving()
                 
-                    audiofile = plantony.listen()
+    #                 audiofile = plantony.listen()
                 
-                    plantony.oracle(network, audiofile, network, tID, amount)
+    #                 plantony.oracle(network, audiofile, network, tID, amount)
 
-                    serial_setup.sendToArduino("thinking")
+    #                 serial_setup.sendToArduino("thinking")
                 
-                    web3.create_metadata(network, tID)
+    #                 web3.create_metadata(network, tID)
 
-                    serial_setup.sendToArduino("asleep")
+    #                 serial_setup.sendToArduino("asleep")
 
 
                 

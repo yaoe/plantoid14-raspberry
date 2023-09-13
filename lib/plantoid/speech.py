@@ -18,9 +18,27 @@ import requests
 
 import random
 import os
+import sys
 import time
 
+from ctypes import *
+from contextlib import contextmanager
+
 from utils.default_prompt_config import default_chat_completion_config, default_completion_config
+
+@contextmanager
+def ignoreStderr():
+    devnull = os.open(os.devnull, os.O_WRONLY)
+    old_stderr = os.dup(2)
+    sys.stderr.flush()
+    os.dup2(devnull, 2)
+    os.close(devnull)
+
+    try:
+        yield
+    finally:
+        os.dup2(old_stderr, 2)
+        os.close(old_stderr)
 
 # FORMAT = pyaudio.paInt16
 # CHANNELS = 1
@@ -70,7 +88,7 @@ def GPTmagic(prompt, call_type='chat_completion'):
         }], **config)
 
         messages = response.choices[0].message.content
-        print(messages)
+        print('gpt response:', messages)
 
         return messages
     
@@ -92,7 +110,7 @@ def GPTmagic(prompt, call_type='chat_completion'):
         return response
 
 
-def speak_text(text):
+def get_text_to_speech_response(text, callback=None):
 
     headers = {
         "Accept": "audio/mpeg",
@@ -118,6 +136,12 @@ def speak_text(text):
 
     if response.status_code == 200:
         # Save remote TTS output to a local audio file with an epoch timestamp
+
+        print('elevenlabs response received')
+
+        if callback is not None:
+            callback()
+            
         filename = f"/tmp/tonyspeak.mp3"
         with open(filename, "wb") as f:
             f.write(response.content)
@@ -170,11 +194,14 @@ def listen_for_speech(): # @@@ remember to add acknowledgements afterwards
     # TODO: pass as param
     audio_file_path = os.getcwd() + "/tmp/temp_reco.wav"
 
-    audio = pyaudio.PyAudio()
+    # audio = pyaudio.PyAudio()
+
+    with ignoreStderr():
+        audio = pyaudio.PyAudio()
 
     stream = audio.open(format=FORMAT, channels=CHANNELS,
                 rate=RATE, input=True,
-		        # input_device_index = device_index,
+                # input_device_index = device_index,
                 frames_per_buffer=CHUNK)
 
     # noisy = adjust_sound_env(stream)
@@ -266,9 +293,8 @@ def record_wav_file(data, audio, audio_file_path):
         #wf.close()
 
 
-def record_speech(filename):
+def recognize_speech(filename):
     
-    print("trying to recognize from ... " + filename)
 
     with sr.AudioFile(filename) as source:
 
@@ -280,6 +306,7 @@ def record_speech(filename):
         usertext = "";
         
         try:
+            print("trying to recognize from ... " + filename)
             usertext = r.recognize_google(audio)
 
         except sr.UnknownValueError:
