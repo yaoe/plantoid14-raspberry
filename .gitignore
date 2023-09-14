@@ -97,6 +97,10 @@ yarn.lock
 *.swp
 *.swo
 
+# no recordings
+tmp/
+tmp/temp_reco.wav
+tmp
 # ================================================
 # End of .gitignore
 # ================================================
