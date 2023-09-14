@@ -7,22 +7,26 @@ import time
 
 from lib.plantoid.text_content import get_text_content
 import lib.plantoid.speech as PlantoidSpeech
-import lib.plantoid.serial_setup as PlantoidSerial
+import lib.plantoid.serial_listen as PlantoidSerial
 
 class Plantony:
 
     def __init__(self):
 
+        # user and agent names
         self.USER = "Human"
         self.AGENT = "Plantoid"
 
+        # a list of events
+        self._events = {}
+
+        # whether to use the Arduino or not
         self.use_arduino = False
 
+        # lines for the opening and closing
         self.opening = ""
         self.closing = ""
         self.prompt_text = ""
-        # TODO: figure out how to encapsulate interaction groups into a single turn without modifying the array length if not 
-        # for the creation of a new cycle
 
         # a round will contain a series of turns
         self.rounds = [[]]
@@ -39,74 +43,50 @@ class Plantony:
             os.getcwd()+"/media/hmm2.mp3",
         ];
 
+        # Load the sounds
         self.introduction = os.getcwd()+"/samples/intro1.mp3"
         self.outroduction = os.getcwd()+"/samples/outro1.mp3"
         self.reflection = os.getcwd()+"/media/initiation.mp3"
         self.cleanse = os.getcwd()+"/media/cleanse.mp3"
 
-    def ambient_background(self, music, stop_event):
+    # def ambient_background(self, music, stop_event):
 
-        while not stop_event.is_set():
-            playsound(music)
+    #     while not stop_event.is_set():
+    #         playsound(music)
 
-    def acknowledge(self):
+    def add_listener(self, event_name, callback):
 
-        return random.choice(self.acknowledgements)
+        # add the callback to the list of listeners
+        if event_name not in self._events:
+            self._events[event_name] = []
+        
+        # add the callback to the list of listeners
+        self._events[event_name].append(callback)
 
-    def append_turn_to_round(self, agent, text):
+    def remove_listener(self, event_name, callback):
 
-        # self.turns.append({ "speaker": agent, "text": text })
+        # remove the callback from the list of listeners
+        if event_name in self._events:
+            self._events[event_name].remove(callback)
 
-        turn_data = { "speaker": agent, "text": text }
+    def trigger(self, event_name, *args, **kwargs):
 
-        self.rounds[-1].append(turn_data)
-
-    # # NOTE: deprecated
-    # def reset_turns(self):
-
-    #     self.turns = []
-
-    # def append_turn(self, turn): # implicitly: to latest round
-
-    #     self.rounds[-1].append(turn)
-
-    def create_round(self):
-            
-        self.rounds.append([])
-
-    def reset_rounds(self):
-
-        self.rounds = []
-
-    def update_prompt(self):
-
-        lines = []
-        transcript = ""
-
-        for turns in self.rounds:
-
-            for turn in turns:
-
-                text = turn["text"]
-                speaker = turn["speaker"]
-                lines.append(speaker + ": " + text)
-
-        transcript = "\n".join(lines)
-
-        return self.prompt_text.replace("{{transcript}}", transcript)
+        # trigger the event
+        if event_name in self._events:
+            for listener in self._events[event_name]:
+                listener(*args, **kwargs)
 
     def setup(self):
 
-        #print(os.getcwd()+"/prompt_context/plantony_context.txt")
         # load the personality of Plantony
         self.prompt_text = open(os.getcwd()+"/prompt_context/plantony_context.txt").read().strip()
 
+        # select a random opening and closing line
         self.opening = random.choice(self.opening_lines)
         self.closing = random.choice(self.closing_lines) 
 
+        # create a round
         self.append_turn_to_round(self.AGENT, self.opening)
-
-        # self.turns.append({ "speaker": self.AGENT, "text": self.opening })
 
         # for Plantony oracle
         self.selected_words = []
@@ -163,7 +143,7 @@ class Plantony:
 
     def respond(self, audio):
 
-        def prompt_agent_and_respond(audio, callback, shared_response_container):
+        def prompt_agent_and_respond(audio, callback):
             
             # user text received from speech recognition
             user_message = PlantoidSpeech.recognize_speech(audio)
@@ -177,12 +157,12 @@ class Plantony:
             # append the user's turn to the latest round
             self.append_turn_to_round(self.USER, user_message)
 
-            use_prompt = self.update_prompt()
+            agent_prompt = self.update_prompt()
 
             # print("new prompt = " + new_prompt)
 
             # generate the response from the GPT model
-            agent_message = PlantoidSpeech.GPTmagic(use_prompt, call_type='chat_completion')
+            agent_message = PlantoidSpeech.GPTmagic(agent_prompt, call_type='chat_completion')
 
             # append the agent's turn to the latest round
             self.append_turn_to_round(self.AGENT, agent_message)
@@ -205,16 +185,10 @@ class Plantony:
             print('stop background music')
             pygame.mixer.music.stop()
 
-        def after_elevenlabs_response():
-            stop_background_music()
-
         if self.use_arduino:
             PlantoidSerial.sendToArduino("thinking")
 
         print("Plantony respond is receiving the audiofile as : " + audio)
-
-        # create a shared response container
-        shared_response_container = dict()
 
         # get the path to the background music
         background_music_path = os.getcwd()+"/media/ambient3.mp3"
@@ -222,18 +196,74 @@ class Plantony:
         # play the background music
         play_background_music(background_music_path)
 
+        # prompt agent and respond
+        prompt_agent_and_respond(audio, stop_background_music)
+
         # create a thread to call the API
-        thread = threading.Thread(target=prompt_agent_and_respond, args=(
-            audio,
-            after_elevenlabs_response,
-            shared_response_container,
-        ))
+        # thread = threading.Thread(target=prompt_agent_and_respond, args=(
+        #     audio,
+        #     after_elevenlabs_response,
+        #     shared_response_container,
+        # ))
 
-        # start the thread
-        thread.start()
+        # # start the thread
+        # thread.start()
 
-        # The script will continue to run while waiting for the API response
-        thread.join()  # This line ensures the script waits for the API thread to complete before proceeding
+        # # The script will continue to run while waiting for the API response
+        # thread.join()  # This line ensures the script waits for the API thread to complete before proceeding
+
+    def acknowledge(self):
+
+        return random.choice(self.acknowledgements)
+
+    def append_turn_to_round(self, agent, text):
+
+        # initialize turn data
+        turn_data = { "speaker": agent, "text": text }
+
+        # append turn data to latest round
+        self.rounds[-1].append(turn_data)
+
+    def create_round(self):
+        
+        # create a new round
+        self.rounds.append([])
+
+    def reset_rounds(self):
+
+        # reset the rounds
+        self.rounds = []
+
+    def update_prompt(self):
+
+        # create a transcript from the rounds
+        lines = []
+        transcript = ""
+
+        # iterate through the rounds
+        for turns in self.rounds:
+
+            # iterate through the turns
+            for turn in turns:
+
+                text = turn["text"]
+                speaker = turn["speaker"]
+                lines.append(speaker + ": " + text)
+
+        # join the lines into a single string
+        transcript = "\n".join(lines)
+
+        return self.prompt_text.replace("{{transcript}}", transcript)
+    
+    def get_prompt(self):
+        
+        return self.prompt_text
+
+    def reset_prompt(self):
+
+        # load the personality of Plantony
+        self.prompt_text = open(os.getcwd()+"/prompt_context/plantony_context.txt").read().strip()
+
         
     def weaving(self):
         

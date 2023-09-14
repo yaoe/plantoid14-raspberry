@@ -1,4 +1,5 @@
 import serial
+import keyboard
 import time
 import os, signal
 import random
@@ -17,15 +18,15 @@ messageComplete = False
 #========================
     # the functions
 
-def setupSerial(baudRate=9600, serialPortName="/dev/ttyUSB0"):
+def setup_serial(PORT="/dev/ttyUSB0", baud_rate=9600):
 
-    global  serialPort
+    # configure the serial connections (the parameters differs on the device you are connecting to)
+    ser = serial.Serial(port=PORT, baudrate=baud_rate)
 
-    serialPort = serial.Serial(port=serialPortName, baudrate=baudRate)
+    print("Serial port " + PORT + " opened  Baudrate " + str(baud_rate))
 
-    print("Serial port " + serialPortName + " opened  Baudrate " + str(baudRate))
-
-    waitForArduino()
+    return ser
+    #waitForArduino()
 
 #========================
 
@@ -39,7 +40,6 @@ def sendToArduino(stringToSend):
     stringWithMarkers += (endMarker)
 
     serialPort.write(stringWithMarkers.encode('utf-8')) # encode needed for Python3
-
 
 
 #==================
@@ -67,7 +67,6 @@ def recvLikeArduino():
 
     else:
         return "XXX"
-
 
 
 #==================

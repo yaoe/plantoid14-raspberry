@@ -16,3 +16,4 @@ mutagen
 regex_spm
 toml
 pygame
+keyboard

@@ -1,4 +1,4 @@
-import lib.plantoid.serial_setup as serial_setup
+import lib.plantoid.serial_listen as serial_listen
 import lib.plantoid.speech as speech
 import lib.plantoid.web3 as web3
 # from lib.plantoid.core import *
@@ -45,10 +45,27 @@ def invoke_plantony(plantony: Plantony, max_rounds=4):
     # print(plantony.rounds)
 
     plantony.reset_rounds()
+    plantony.reset_prompt()
     # awake = 0
+
+def mock_arduino_event_listen(ser, plantony, max_rounds=4):
+
+    try:
+        while True:
+            if ser.in_waiting > 0:
+                line = ser.readline().decode('utf-8').strip()
+                if line == "button_pressed":
+                    print("Button was pressed, Invoking Plantony!")
+
+                    plantony.trigger('Touched', plantony, max_rounds=max_rounds)
+
+    except KeyboardInterrupt:
+        print("Program stopped by the user.")
+        ser.close()
 
 def main():
 
+    # load config
     config = load_config('./configuration.toml')
 
     cfg = config['general']
@@ -56,12 +73,14 @@ def main():
     use_blockchain = str_to_bool(cfg['ENABLE_BLOCKCHAIN'])
     use_arduino = str_to_bool(cfg['ENABLE_ARDUINO'])
     serial_port_name = cfg['SERIAL_PORT_NAME']
-    max_rounds = cfg['max_rounds']
+    max_rounds = 2#cfg['max_rounds']
 
-    # TODO: either remove or create a paradigm for these
-    # awake = 0
+    # set serial port
+    # NOTE: based on this command: socat -d -d pty,raw,echo=0 pty,raw,echo=0
+    PORT = '/dev/pts/4'
 
-    # max_rounds = 4 
+    # setup serial
+    ser = serial_listen.setup_serial(PORT=PORT)
 
     # instantiate plantony
     plantony = Plantony()
@@ -69,8 +88,21 @@ def main():
     # setup plantony
     plantony.setup()
 
+    # add listener
+    plantony.add_listener('Touched', invoke_plantony)
+
+    # check for keyboard press
+    mock_arduino_event_listen(ser, plantony, max_rounds=max_rounds)
+    # serial_listen.listen_for_keyboard_press(ser)
+
+
+
+    # trigger plantony
+    # NOTE: this is a mocked event
+    # plantony.trigger('Touched', plantony, max_rounds=max_rounds)
+
     # invoke plantony
-    invoke_plantony(plantony, max_rounds=max_rounds)
+    # invoke_plantony(plantony, max_rounds=max_rounds)
 
     # if use_blockchain and use_arduino: 
 
