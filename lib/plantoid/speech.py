@@ -7,6 +7,10 @@ import speech_recognition as sr
 import pyaudio
 import wave
 import audioop
+import struct
+
+import numpy as np
+
 from collections import deque
 
 from playsound import playsound
@@ -151,7 +155,57 @@ def get_text_to_speech_response(text, callback=None):
     
     else:
 
-        raise Exception("Error: " + str(response.status_code), response.detail)
+        raise Exception("Error: " + str(response.status_code))
+
+def compute_average(fragment, sample_width=2):
+    """Compute the raw average of audio samples."""
+    
+    # Number of samples in the fragment
+    num_samples = len(fragment) // sample_width
+
+    # Unpack the audio samples
+    if sample_width == 1:
+        fmt = f"{num_samples}B"  # Unsigned byte
+        samples = struct.unpack(fmt, fragment)
+        # Convert to signed values in the range -128 to 127
+        samples = [s - 128 for s in samples]
+    elif sample_width == 2:
+        fmt = f"{num_samples}h"  # Short
+        samples = struct.unpack(fmt, fragment)
+    else:
+        raise ValueError("Unsupported sample width")
+    
+    # Compute the average
+    avg = sum(samples) / num_samples
+    return avg
+
+def compute_median(fragment, sample_width=2):
+    """Compute the median of audio samples."""
+    
+    # Number of samples in the fragment
+    num_samples = len(fragment) // sample_width
+
+    # Unpack the audio samples
+    if sample_width == 1:
+        fmt = f"{num_samples}B"  # Unsigned byte
+        samples = struct.unpack(fmt, fragment)
+        # Convert to signed values in the range -128 to 127
+        samples = [s - 128 for s in samples]
+    elif sample_width == 2:
+        fmt = f"{num_samples}h"  # Short
+        samples = struct.unpack(fmt, fragment)
+    else:
+        raise ValueError("Unsupported sample width")
+
+    # Compute the median
+    sorted_samples = sorted(samples)
+    mid = num_samples // 2
+    if num_samples % 2 == 0:  # even number of samples
+        median = (sorted_samples[mid - 1] + sorted_samples[mid]) / 2
+    else:
+        median = sorted_samples[mid]
+    
+    return median
 
 def adjust_sound_env(stream): ## important in order to adjust the THRESHOLD based on environmental noise
     
@@ -160,9 +214,19 @@ def adjust_sound_env(stream): ## important in order to adjust the THRESHOLD base
 
     for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
         data = stream.read(CHUNK)
-        noisy.append(abs(audioop.avg(data, 2)))
+
+        manual_average = abs(compute_average(data, sample_width=2))
+        manual_median = abs(compute_median(data, sample_width=2))
+        audioop_average = abs(audioop.avg(data, 2))
+
+        # print("manual median", manual_median)
+        # print("manual average", manual_average)
+        # print("audioop average", audioop_average)
+        # print("\n")
+
+        noisy.append(manual_median)
  
-    current_noise =  sum(noisy) / len(noisy)
+    current_noise = sum(noisy) / len(noisy)
     print("current noise = " + str(current_noise))
 
     return current_noise
@@ -171,15 +235,33 @@ def adjust_sound_env(stream): ## important in order to adjust the THRESHOLD base
 def return_noise_threshold(noisy):
 
     THRESHOLD = 0
-    ## range should be:  if noisy is 10 = 50; if noisy = 100 = 250;
-    if(noisy < 10): THRESHOLD = 50
-    if(noisy > 10 and noisy < 20): THRESHOLD = 100
-    if(noisy > 20 and noisy < 30): THRESHOLD = 140
-    if(noisy > 30 and noisy < 40): THRESHOLD = 160
-    if(noisy > 40 and noisy < 50): THRESHOLD = 170
-    if(noisy > 50 and noisy < 60): THRESHOLD = 200
-    if(noisy > 60 and noisy < 70): THRESHOLD = 300
-    if(noisy > 70): THRESHOLD = 350
+
+    bias = -50
+    multiplier = 1.5
+    # ## range should be:  if noisy is 10 = 50; if noisy = 100 = 250;
+    # if(noisy < 10): THRESHOLD = 50
+    # if(noisy > 10 and noisy < 20): THRESHOLD = 100 + bias 
+    # if(noisy > 20 and noisy < 30): THRESHOLD = 140 + bias
+    # if(noisy > 30 and noisy < 40): THRESHOLD = 160 + bias
+    # if(noisy > 40 and noisy < 50): THRESHOLD = 170 + bias
+    # if(noisy > 50 and noisy < 60): THRESHOLD = 200 + bias
+    # if(noisy > 60 and noisy < 70): THRESHOLD = 300 + bias
+    # if(noisy > 70): THRESHOLD = 350 + bias
+
+    noise_ranges = list(np.array([0, 10, 20, 30, 40, 50, 60, 70, float('inf')]) * multiplier)
+    thresholds = list(np.array([50, 100, 140, 160, 170, 200, 300, 350] ))
+
+    # Ensure that the length of noise_ranges is one more than the length of thresholds
+    if len(noise_ranges) != len(thresholds) + 1:
+        raise ValueError("noise_ranges should have one more element than thresholds")
+
+    for i in range(len(noise_ranges) - 1):
+
+        if noise_ranges[i] <= noisy < noise_ranges[i + 1]:
+
+            return thresholds[i] + bias
+        
+    return thresholds[-1] + bias
 
     return THRESHOLD
 
@@ -204,8 +286,10 @@ def listen_for_speech(): # @@@ remember to add acknowledgements afterwards
                 # input_device_index = device_index,
                 frames_per_buffer=CHUNK)
 
-    # noisy = adjust_sound_env(stream)
-    # THRESHOLD = return_noise_threshold(noisy)
+    noisy = adjust_sound_env(stream)
+    THRESHOLD = return_noise_threshold(noisy)
+
+    print("THRESHOLD", THRESHOLD)
 
     samples = []
 

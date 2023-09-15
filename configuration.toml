@@ -1,6 +1,6 @@
 [general]
 ENABLE_BLOCKCHAIN = "False"
 ENABLE_ARDUINO = "False"
-SERIAL_PORT_INPUT = "/dev/pts/5"
-SERIAL_PORT_OUTPUT = "/dev/pts/6"
+SERIAL_PORT_INPUT = "/dev/pts/6"
+SERIAL_PORT_OUTPUT = "/dev/pts/7"
 max_rounds=4
