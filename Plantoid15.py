@@ -72,12 +72,8 @@ def main():
 
     use_blockchain = str_to_bool(cfg['ENABLE_BLOCKCHAIN'])
     use_arduino = str_to_bool(cfg['ENABLE_ARDUINO'])
-    serial_port_name = cfg['SERIAL_PORT_NAME']
+    PORT = cfg['SERIAL_PORT_OUTPUT']
     max_rounds = cfg['max_rounds']
-
-    # set serial port
-    # NOTE: based on this command: socat -d -d pty,raw,echo=0 pty,raw,echo=0
-    PORT = '/dev/pts/4'
 
     # setup serial
     ser = serial_listen.setup_serial(PORT=PORT)

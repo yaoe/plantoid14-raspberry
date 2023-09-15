@@ -9,6 +9,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from lib.plantoid.serial_listen import setup_serial
+from utils.util import load_config
 
 def mock_arduino_keyboard_input(ser):
 
@@ -34,8 +35,16 @@ def mock_arduino_keyboard_input(ser):
         print("Program stopped by the user.")
         ser.close()
 
+
+
+
 if __name__ == "__main__":
-    
-    PORT = '/dev/pts/3'
+
+    config = load_config('./configuration.toml')
+
+    cfg = config['general']
+
+    PORT = cfg['SERIAL_PORT_INPUT']
+
     ser = setup_serial(PORT=PORT)
     mock_arduino_keyboard_input(ser)
