@@ -31,43 +31,80 @@ PINATA_JWT = os.getenv('PINATA_JWT')
 INFURA_API_KEY_MAINNET = os.environ.get("INFURA_MAINNET")
 INFURA_API_KEY_GOERLI = os.environ.get("INFURA_GOERLI")
 
+def setup_web3_provider(config):
 
-pinata = Pinata(PINATA_API_KEY, PINATA_API_SECRET, PINATA_JWT)
+    goerli = None
+    mainnet = None
+
+    if config['use_goerli'] == True:
+
+        # make sure that the script can listen to both events happening in mainnet and goerli, and process them accordingly !
+        goerli = setup('wss://goerli.infura.io/ws/v3/'+INFURA_API_KEY_GOERLI,
+                                    config['use_goerli_address'],
+                                    os.getcwd(),
+                                    1000000000000000,  # one line every 0.001 ETH
+                                    "http://15goerli.plantoid.org",
+                                    1) # this set failsafe = 1 (meaning we should recycle movies)
+
+    if config['use_mainnet'] == True:
+
+        # lorem ipsum
+        mainnet = setup('wss://mainnet.infura.io/ws/v3/'+INFURA_API_KEY_MAINNET,
+                                    config['use_mainnet_address'],
+                                    os.getcwd(),
+                                    10000000000000000,  # one line every 0.01 ETH)
+                                    "http://15.plantoid.org",
+                                    0) # this set failsafe = 0 (meaning we should generate a new movie)
+    
+    return goerli, mainnet
 
 def setup(infura_websock, addr, path, feeding_amount, reclaim_url, failsafe):
 
+    # create a web3 object
     network = Web3Object();
 
+    # connect to the infura node
     network.w3 = Web3(Web3.WebsocketProvider(infura_websock))
-    
-    print(network.w3)
-    print(network.w3.is_connected())
+
+    print('w3 is', network.w3)
+    print('is connected', network.w3.is_connected())
+
+    # checksum the address
+    address = Web3.to_checksum_address(addr)
+    print('address is', address)
+
+    # get the balance of the address
+    eth_balance_wei = network.w3.eth.get_balance(address)
+    eth_balance = network.w3.from_wei(eth_balance_wei, 'ether')
+
+    print('eth balance:', eth_balance)
 
     abifile = open(path + '/abi', 'r')
     o = abifile.read()
     abi = o.replace('\n', '')
-    print(abi)
+    # print(abi)
     abifile.close()
 
-    address = Web3.to_checksum_address(addr)
-
+    # instantiate the contract
     network.plantoid_contract = network.w3.eth.contract(address=address, abi=abi)
-    print(network.w3.eth.get_balance(address))
 
+    # instantiate the event filter
     network.event_filter = network.plantoid_contract.events.Deposit.create_filter(fromBlock=1)
-    print(network.event_filter)
+    # print('event filter:', network.event_filter)
     
+    # set the path
     network.path = path
 
+    # set the minimum amount of wei that needs to be fed to the plantoid
     network.min_amount = feeding_amount
 
+    # set the url to reclaim the plantoid
     network.reclaim_url = reclaim_url
 
+    # set the failsafe
     network.failsafe = failsafe
 
     return network
-
-    # process_previous_tx(path, event_filter)
 
 def process_previous_tx(web3obj):
 
@@ -107,29 +144,35 @@ def process_previous_tx(web3obj):
             create_metadata(web3obj, str(event.args.tokenId))
 
     
-def checkforDeposits(web3obj):
+def check_for_deposits(web3obj):
 
+    # get the event filter
     event_filter = web3obj.event_filter
 
-    try:
-        events = event_filter.get_new_entries()
+    events = event_filter.get_new_entries()
 
-    except:
-        print("failed to read new entries()\n")
-        # TODO: check if this is correct exception handling
-        return None
+    if len(events) > 0:
 
-    else:
         for event in events:
             print("new Deposit EVENT !! ")
             print("token id = " + str(event.args.tokenId))
             print("amount = " + str(event.args.amount))
 
-            return ( str(event.args.tokenId), int(event.args.amount) )  ### @@@@ need to fix this  :)
-           #  return  str(event.args.tokenId) 
+            return (str(event.args.tokenId), int(event.args.amount))  ### @@@@ need to fix this  :)
+
+    else:
+
+        return None
+    # except:
+    #     print("failed to read new entries()\n")
+    #     # TODO: check if this is correct exception handling
+    #     return None
+
+    #        #  return  str(event.args.tokenId) 
 
 def create_metadata(web3obj, tID):
 
+    pinata = Pinata(PINATA_API_KEY, PINATA_API_SECRET, PINATA_JWT)
 
     path = web3obj.path
 
@@ -197,26 +240,4 @@ def create_metadata(web3obj, tID):
         outfile.write(tID + "\n")
 
     ### NB: The metadata file will be pinned to IPFS via the node server
-
-
-
-def setup_web3_provider():
-
-    # make sure that the script can listen to both events happening in mainnet and goerli, and process them accordingly !
-    goerli = setup('wss://goerli.infura.io/ws/v3/'+INFURA_API_KEY_GOERLI,
-                                '0x0B60EE161d7b67fa231e9565dAFF65b34553bC6F',
-                                '/home/pi/PLLantoid/v6/GOERLI/',
-                                1000000000000000,  # one line every 0.001 ETH
-                                "http://15goerli.plantoid.org",
-                                1) # this set failsafe = 1 (meaning we should recycle movies)
-
-    # lorem ipsum
-    mainnet = setup('wss://mainnet.infura.io/ws/v3/'+INFURA_API_KEY_MAINNET,
-                                '0x4073E38f71b2612580E9e381031B0c38B3B4C27E', 
-                                "/home/pi/PLLantoid/v6/MAINNET/",
-                                10000000000000000,  # one line every 0.01 ETH)
-                                "http://15.plantoid.org",
-                                0) # this set failsafe = 0 (meaning we should generate a new movie)
-    
-    return goerli, mainnet
 

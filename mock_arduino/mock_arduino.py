@@ -40,7 +40,7 @@ def mock_arduino_keyboard_input(ser):
 
 if __name__ == "__main__":
 
-    config = load_config('./configuration.toml')
+    config = load_config('../configuration.toml')
 
     cfg = config['general']
 

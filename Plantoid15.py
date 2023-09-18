@@ -1,6 +1,6 @@
 import lib.plantoid.serial_listen as serial_listen
-import lib.plantoid.speech as speech
-import lib.plantoid.web3 as web3
+# import lib.plantoid.speech as speech
+import lib.plantoid.web3_connection as web3_connection
 # from lib.plantoid.core import *
 
 from plantoids.plantoid import Plantony
@@ -13,7 +13,7 @@ import regex_spm
 import time
 import os
 
-def invoke_plantony(plantony: Plantony, max_rounds=4):
+def invoke_plantony(plantony: Plantony, network, max_rounds=4):
 
     print('plantony initiating...')
     plantony.welcome()
@@ -41,6 +41,8 @@ def invoke_plantony(plantony: Plantony, max_rounds=4):
     print('plantony terminating...')
     plantony.terminate()
 
+    print('checking if fed...')
+    plantony.check_if_fed(network)
     # print('debug: plantony rounds...')
     # print(plantony.rounds)
 
@@ -48,7 +50,7 @@ def invoke_plantony(plantony: Plantony, max_rounds=4):
     plantony.reset_prompt()
     # awake = 0
 
-def mock_arduino_event_listen(ser, plantony, max_rounds=4):
+def mock_arduino_event_listen(ser, plantony, network, max_rounds=4):
 
     try:
         while True:
@@ -57,7 +59,7 @@ def mock_arduino_event_listen(ser, plantony, max_rounds=4):
                 if line == "button_pressed":
                     print("Button was pressed, Invoking Plantony!")
 
-                    plantony.trigger('Touched', plantony, max_rounds=max_rounds)
+                    plantony.trigger('Touched', plantony, network, max_rounds=max_rounds)
 
     except KeyboardInterrupt:
         print("Program stopped by the user.")
@@ -75,8 +77,25 @@ def main():
     PORT = cfg['SERIAL_PORT_OUTPUT']
     max_rounds = cfg['max_rounds']
 
+    web3_config = {
+        'use_goerli': str_to_bool(cfg['USE_GOERLI']),
+        'use_mainnet': str_to_bool(cfg['USE_MAINNET']),
+        'use_goerli_address': cfg['USE_GOERLI_ADDRESS'],
+        'use_mainnet_address': cfg['USE_MAINNET_ADDRESS'],
+    }
+
     # setup serial
     ser = serial_listen.setup_serial(PORT=PORT)
+
+    # setup web3
+    goerli, mainnet = web3_connection.setup_web3_provider(web3_config)
+
+    print('goerli', goerli)
+    print('mainnet', mainnet)
+
+    # # process previous tx
+    # if mainnet is not None: web3.process_previous_tx(mainnet)
+    # if goerli is not None: web3.process_previous_tx(goerli)
 
     # instantiate plantony
     plantony = Plantony()
@@ -88,7 +107,7 @@ def main():
     plantony.add_listener('Touched', invoke_plantony)
 
     # check for keyboard press
-    mock_arduino_event_listen(ser, plantony, max_rounds=max_rounds)
+    mock_arduino_event_listen(ser, plantony, goerli, max_rounds=max_rounds)
     # serial_listen.listen_for_keyboard_press(ser)
 
 
@@ -151,7 +170,7 @@ def main():
     #         # check for a new Deposit event
     #         for network in (mainnet, goerli):
 
-    #             mylist  = web3.checkforDeposits(network) ### this returns the token ID and the amount of wei that plantoid has been fed with
+    #             mylist  = web3.check_for_deposits(network) ### this returns the token ID and the amount of wei that plantoid has been fed with
 
     #             if(mylist != None):  # Plantoid has been fed
                 

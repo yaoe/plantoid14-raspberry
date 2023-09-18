@@ -224,9 +224,12 @@ def adjust_sound_env(stream): ## important in order to adjust the THRESHOLD base
         # print("audioop average", audioop_average)
         # print("\n")
 
-        noisy.append(manual_median)
+        noisy.append(audioop_average)
  
-    current_noise = sum(noisy) / len(noisy)
+    # current_noise = sum(noisy) / len(noisy)
+    current_noise = np.mean(noisy) #
+    # current_noise = np.median(noisy)
+
     print("current noise = " + str(current_noise))
 
     return current_noise
@@ -267,7 +270,6 @@ def return_noise_threshold(noisy):
 
 def listen_for_speech(): # @@@ remember to add acknowledgements afterwards
 
-    print('listening for speech...')
 
     # TEMP
     record_mode = 'continuous'
@@ -285,6 +287,8 @@ def listen_for_speech(): # @@@ remember to add acknowledgements afterwards
                 rate=RATE, input=True,
                 # input_device_index = device_index,
                 frames_per_buffer=CHUNK)
+    
+    print('quiet! checking noise threshold...')
 
     noisy = adjust_sound_env(stream)
     THRESHOLD = return_noise_threshold(noisy)
@@ -301,6 +305,8 @@ def listen_for_speech(): # @@@ remember to add acknowledgements afterwards
            samples.append(data)
 
     if record_mode == 'continuous':
+
+        print('listening for speech...')
 
         chunks_per_second = RATE / CHUNK
 
