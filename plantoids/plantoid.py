@@ -25,6 +25,7 @@ class Plantony:
 
         # a list of events
         self._events = {}
+        self.stop_event = None
 
         # whether to use the Arduino or not
         self.use_arduino = True
@@ -45,15 +46,15 @@ class Plantony:
 
         # Load the sounds
         self.acknowledgements = [
-            os.getcwd()+"/media/hmm1.mp3",
-            os.getcwd()+"/media/hmm2.mp3",
+            "/home/pi/PLLantoid/plantoid15-raspberry/media/hmm1.mp3",
+            "/home/pi/PLLantoid/plantoid15-raspberry/media/hmm2.mp3",
         ];
 
         # Load the sounds
-        self.introduction = os.getcwd()+"/samples/intro1.mp3"
-        self.outroduction = os.getcwd()+"/samples/outro1.mp3"
-        self.reflection = os.getcwd()+"/media/initiation.mp3"
-        self.cleanse = os.getcwd()+"/media/cleanse.mp3"
+        self.introduction = "/home/pi/PLLantoid/plantoid15-raspberry/samples/intro1.mp3"
+        self.outroduction = "/home/pi/PLLantoid/plantoid15-raspberry/samples/outro1.mp3"
+        self.reflection = "/home/pi/PLLantoid/plantoid15-raspberry/media/initiation.mp3"
+        self.cleanse = "/home/pi/PLLantoid/plantoid15-raspberry/media/cleanse.mp3"
 
     # def ambient_background(self, music, stop_event):
 
@@ -85,7 +86,7 @@ class Plantony:
     def setup(self):
 
         # load the personality of Plantony
-        self.prompt_text = open(os.getcwd()+"/prompt_context/plantony_context.txt").read().strip()
+        self.prompt_text = open("/home/pi/PLLantoid/plantoid15-raspberry/prompt_context/plantony_context.txt").read().strip()
 
         # select a random opening and closing line
         self.opening = random.choice(self.opening_lines)
@@ -112,14 +113,37 @@ class Plantony:
         if self.use_arduino:
             PlantoidSerial.send_to_arduino(self.serial_connector, message)
 
-    def play_background_music(self, filename, loops=-1):
-        pygame.mixer.init()
-        pygame.mixer.music.load(filename)
-        pygame.mixer.music.play(loops)
+    # def play_background_music(self, filename, loops=-1):
+        # pygame.mixer.init()
+        # pygame.mixer.music.load(filename)
+        # pygame.mixer.music.play(loops)
 
-    def stop_background_music(self):
-        print('stop background music')
-        pygame.mixer.music.stop()
+    
+    def threads_music_play(self, filename, loop):
+
+        
+        def ambient_music_callback(filename, loop, stop_event):
+
+            if not loop:
+                playsound(filename)
+                return;
+
+            while not self.stop_event.is_set():
+                playsound(filename)
+    
+        self.stop_event = threading.Event()
+        sound_thread = threading.Thread(target=ambient_music_callback, args=(filename, loop, self.stop_event))
+        sound_thread.daemon = True;
+        sound_thread.start()
+
+
+    def threads_music_stop(self):
+        self.stop_event.set()
+
+
+    # def stop_background_music(self):
+    #    print('stop background music')
+    #    pygame.mixer.music.stop()
 
     def welcome(self):
 
@@ -144,7 +168,7 @@ class Plantony:
         playsound(PlantoidSpeech.get_text_to_speech_response(self.closing)) 
         playsound(self.outroduction)
 
-        self.send_serial_message("asleep")
+        # self.send_serial_message("asleep")
 
     def listen(self):
 
@@ -196,13 +220,16 @@ class Plantony:
         print("Plantony respond is receiving the audiofile as : " + audio)
 
         # get the path to the background music
-        background_music_path = os.getcwd()+"/media/ambient3.mp3"
+        background_music_path = "/home/pi/PLLantoid/plantoid15-raspberry/media/ambient3.mp3"
 
         # play the background music
-        self.play_background_music(background_music_path)
+        # stop = self.play_background_music(background_music_path)
+        self.threads_music_play(background_music_path, 1)
+        
 
         # prompt agent and respond
-        prompt_agent_and_respond(audio, self.stop_background_music)
+        # prompt_agent_and_respond(audio, self.stop_background_music)
+        prompt_agent_and_respond(audio, self.threads_music_stop)
 
         # create a thread to call the API
         # thread = threading.Thread(target=prompt_agent_and_respond, args=(
@@ -267,7 +294,7 @@ class Plantony:
     def reset_prompt(self):
 
         # load the personality of Plantony
-        self.prompt_text = open(os.getcwd()+"/prompt_context/plantony_context.txt").read().strip()
+        self.prompt_text = open("/home/pi/PLLantoid/plantoid15-raspberry/prompt_context/plantony_context.txt").read().strip()
 
         
     def weaving(self):
@@ -284,10 +311,11 @@ class Plantony:
         path = network.path
 
         # get the path to the background music
-        background_music_path = os.getcwd()+"/media/ambient3.mp3"
+        background_music_path = "/home/pi/PLLantoid/plantoid15-raspberry/media/ambient3.mp3"
 
         # play the background music
-        self.play_background_music(background_music_path)
+        # self.play_background_music(background_music_path)
+        self.threads_music_play(background_music_path, 1 )
 
         # get generated transcript
         generated_transcript = PlantoidSpeech.recognize_speech(audio)
@@ -366,7 +394,9 @@ class Plantony:
         # os.system("cp " + audiofile + " " + path + f"/sermons/{tID}_sermon.mp3")
 
         # stop the background music
-        self.stop_background_music()
+        # self.stop_background_music()
+        self.threads_music_stop() 
+
 
         # play the oracle
         self.read_oracle(audiofile)
@@ -377,10 +407,11 @@ class Plantony:
         self.send_serial_message("speaking")
         
         # playsound(filename)
-        self.play_background_music(filename, loops=0)
+        # self.play_background_music(filename, loops=0)
+        self.threads_music_play(filename, 0)
         time.sleep(1)
 
-        self.send_serial_message("asleep")
+        # self.send_serial_message("asleep")
         
         # # playsound(self.cleanse)
         # self.play_background_music(self.cleanse, loops=0)
@@ -422,7 +453,7 @@ class Plantony:
             # pin the metadata to IPFS and enable reveal link via metatransaction
             web3_utils.enable_seed_reveal(network, token_Id)
 
-            self.send_serial_message("asleep")
+            # self.send_serial_message("asleep")
 
 
         else:

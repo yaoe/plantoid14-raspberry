@@ -1,6 +1,6 @@
 from web3 import Web3, EthereumTesterProvider
 from eth_account import Account, messages
-from oz_defender.relay import RelayClient, RelayerClient
+# from oz_defender.relay import RelayClient, RelayerClient
 import subprocess
 import os
 import time

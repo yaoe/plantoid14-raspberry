@@ -6,7 +6,7 @@ from plantoids.plantoid import Plantony
 from utils.util import load_config, str_to_bool
 from dotenv import load_dotenv
 
-def invoke_plantony(plantony: Plantony, network, max_rounds=4):
+def invoke_plantony(plantony: Plantony, network, max_rounds=7):
 
     print('plantony initiating...')
     plantony.welcome()
@@ -43,6 +43,7 @@ def invoke_plantony(plantony: Plantony, network, max_rounds=4):
     plantony.reset_rounds()
     plantony.reset_prompt()
 
+
 def mock_arduino_event_listen(ser, plantony, network, max_rounds=4):
 
     try:
@@ -58,11 +59,13 @@ def mock_arduino_event_listen(ser, plantony, network, max_rounds=4):
                 try:
 
                     line = ser.readline().decode('utf-8').strip()
-                    if line == "button_pressed":
+                    print("line ====", line)
+
+                    if line.find("Waving") != -1:
 
                         # Trigger plantony interaction
                         print("Button was pressed, Invoking Plantony!")
-                        plantony.trigger('Touched', plantony, network, max_rounds=max_rounds)
+                        plantony.trigger('Touched', plantony, network, max_rounds=5)
 
                         # Clear the buffer after reading to ensure no old "button_pressed" events are processed.
                         ser.reset_input_buffer()
@@ -83,7 +86,7 @@ def mock_arduino_event_listen(ser, plantony, network, max_rounds=4):
 def main():
 
     # load config
-    config = load_config(os.getcwd()+'/configuration.toml')
+    config = load_config('/home/pi/PLLantoid/plantoid15-raspberry/configuration.toml')
 
     cfg = config['general']
 
@@ -105,7 +108,11 @@ def main():
     PORT = os.environ.get('SERIAL_PORT_OUTPUT')
 
     # setup serial
-    ser = serial_utils.setup_serial(PORT=PORT)
+    # ser = serial_utils.setup_serial(PORT=PORT)
+    ser = serial_utils.setup_serial(PORT="/dev/ttyUSB0")
+    serial_utils.wait_for_arduino(ser)
+    serial_utils.send_to_arduino(ser, "awake")
+
 
     # setup web3
     goerli, mainnet = web3_utils.setup_web3_provider(web3_config)
@@ -127,7 +134,7 @@ def main():
     plantony.add_listener('Touched', invoke_plantony)
 
     # process previous tx
-    web3_utils.process_previous_tx(goerli)
+#    web3_utils.process_previous_tx(goerli)
 
     # check for keyboard press
     mock_arduino_event_listen(ser, plantony, goerli, max_rounds=max_rounds)

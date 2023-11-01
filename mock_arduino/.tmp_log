@@ -1,3 +1,11 @@
-2023/10/15 14:54:54 socat[12408] N PTY is /dev/pts/4
-2023/10/15 14:54:54 socat[12408] N PTY is /dev/pts/5
-2023/10/15 14:54:54 socat[12408] N starting data transfer loop with FDs [6,6] and [8,8]
+2023/10/24 14:34:29 socat[4121] N PTY is /dev/pts/2
+2023/10/24 14:34:29 socat[4121] N PTY is /dev/pts/4
+2023/10/24 14:34:29 socat[4121] N starting data transfer loop with FDs [6,6] and [8,8]
+2023/10/24 17:34:59 socat[4121] N socat_signal(): handling signal 1
+2023/10/24 17:34:59 socat[4121] N exiting on signal 1
+2023/10/24 17:34:59 socat[4121] N socat_signal(): finishing signal 1
+2023/10/24 17:34:59 socat[4121] N exit(129)
+2023/10/24 17:34:59 socat[4121] N socat_signal(): handling signal 15
+2023/10/24 17:34:59 socat[4121] W exiting on signal 15
+2023/10/24 17:34:59 socat[4121] N socat_signal(): finishing signal 15
+2023/10/24 17:34:59 socat[4121] N exit(143)

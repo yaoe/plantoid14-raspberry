@@ -124,6 +124,7 @@ def get_text_to_speech_response(text, callback=None):
     }
 
     eleven_voice_id = '21m00Tcm4TlvDq8ikWAM' # Rachel
+    eleven_voice_id = 'o7lPjDgzlF8ZloHzVPeK' #Tony
     url = "https://api.elevenlabs.io/v1/text-to-speech/"+eleven_voice_id
 
     # Request TTS from remote API
@@ -271,7 +272,7 @@ def return_noise_threshold(noisy, threshold_bias=0):
 
 def listen_for_speech(): # @@@ remember to add acknowledgements afterwards
 
-    config = load_config(os.getcwd()+'/configuration.toml')
+    config = load_config('/home/pi/PLLantoid/plantoid15-raspberry/configuration.toml')
 
     cfg = config['audio']
 
